@@ -9,7 +9,6 @@ from rest_framework import status
 def custom_exception_handler(exc, context):
     # Call REST framework's default exception handler first,
     # to get the standard error response.
-    print("HEEELELELEL")
     response = exception_handler(exc, context)
 
     # Handle validation errors

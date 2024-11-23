@@ -3,25 +3,27 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from .models import Driver, Rider, User
 from .serializers import (
+    DriverProfileSerializer,
     DriverSerializer,
+    DriverUpdateProfileSerializer,
+    PasswordUpdateSerializer,
+    RiderProfileSerializer,
     RiderSerializer,
-    UserCreationSerializer,
+    RiderUpdateProfileSerializer,
     UserSerializer,
+    OTPSerializer,
+    OTPVerificationSerializer,
+    DriverSignupSerializer,
+    RiderSignupSerializer,
 )
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import update_session_auth_hash
 
 from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import OTP
-from .serializers import (
-    OTPSerializer,
-    OTPVerificationSerializer,
-    UserCreationSerializer,
-)
-
-from .serializers import DriverSignupSerializer, RiderSignupSerializer
 
 
 def get_tokens_for_user(user):
@@ -43,6 +45,28 @@ def format_serializer_error(errors):
     return custom_response_data
 
 
+class ProfileUpdateView(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.user.user_type == "driver":
+            return DriverUpdateProfileSerializer
+        elif self.request.user.user_type == "rider":
+            return RiderUpdateProfileSerializer
+
+    def get_queryset(self):
+        if self.request.user.user_type == "driver":
+            return Driver.objects.filter(user=self.request.user)
+        elif self.request.user.user_type == "rider":
+            return Rider.objects.filter(user=self.request.user)
+
+    def get_object(self):
+        if self.request.user.user_type == "driver":
+            return self.request.user.driver
+        elif self.request.user.user_type == "rider":
+            return self.request.user.rider
+
+
 class DriverDetailView(generics.RetrieveAPIView):
     queryset = Driver.objects.all()
     serializer_class = DriverSerializer
@@ -53,6 +77,24 @@ class RiderDetailView(generics.RetrieveAPIView):
     queryset = Rider.objects.all()
     serializer_class = RiderSerializer
     permission_classes = [IsAuthenticated]
+
+
+class DriverProfileUpdateView(generics.UpdateAPIView):
+    queryset = Driver.objects.all()
+    serializer_class = DriverSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user.driver
+
+
+class RiderProfileUpdateView(generics.UpdateAPIView):
+    queryset = Rider.objects.all()
+    serializer_class = RiderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user.rider
 
 
 class GenerateOTPView(APIView):
@@ -127,17 +169,53 @@ class DriverSignupView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = []
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        response_serializer = UserSerializer(user)
+        return Response(
+            {"tokens": get_tokens_for_user(user), "user": response_serializer.data},
+            status=status.HTTP_201_CREATED,
+        )
+
 
 class RiderSignupView(generics.CreateAPIView):
     serializer_class = RiderSignupSerializer
     queryset = User.objects.all()
     permission_classes = []
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        response_serializer = UserSerializer(user)
+        return Response(
+            {"tokens": get_tokens_for_user(user), "user": response_serializer.data},
+            status=status.HTTP_201_CREATED,
+        )
 
-class UserCreationView(generics.CreateAPIView):
-    serializer_class = UserCreationSerializer
-    queryset = User.objects.all()
-    permission_classes = []
+
+class PasswordUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = PasswordUpdateSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(raise_exception=True)
+        user = request.user
+        if not user.check_password(serializer.validated_data["old_password"]):
+            return Response(
+                {"error": "Old password is incorrect."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        user.set_password(serializer.validated_data["new_password"])
+        user.save()
+        update_session_auth_hash(request, user)  # Important to keep the user logged in
+        return Response(
+            {"message": "Password updated successfully."}, status=status.HTTP_200_OK
+        )
 
 
 class AuthenticatedUserView(generics.RetrieveAPIView):
@@ -153,18 +231,17 @@ class AuthenticatedUserView(generics.RetrieveAPIView):
             return Response({"error": "User is not authenticated"}, status=401)
 
 
-class UserList(generics.ListCreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = []
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        user = User.objects.get(username=request.data["username"])
-        user.set_password(request.data["password"])
-        user.save()
-        if request.data.get("userType") == "driver":
-            Driver.objects.create(user=user)
-        elif request.data.get("userType") == "rider":
-            Rider.objects.create(user=user)
-        return response
+    def get(self, request, *args, **kwargs):
+        view = AuthenticatedUserView.as_view()
+        return view(request._request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        view = ProfileUpdateView.as_view()
+        return view(request._request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        view = ProfileUpdateView.as_view()
+        return view(request._request, *args, **kwargs)
