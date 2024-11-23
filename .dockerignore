@@ -1,0 +1,17 @@
+staticfiles/
+
+
+migrations/
+
+**/.env
+.env
+
+
+__pycache__/
+/__pycache__
+/staticfiles
+
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
