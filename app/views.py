@@ -45,58 +45,6 @@ def format_serializer_error(errors):
     return custom_response_data
 
 
-class ProfileUpdateView(generics.UpdateAPIView):
-    permission_classes = [IsAuthenticated]
-
-    def get_serializer_class(self):
-        if self.request.user.user_type == "driver":
-            return DriverUpdateProfileSerializer
-        elif self.request.user.user_type == "rider":
-            return RiderUpdateProfileSerializer
-
-    def get_queryset(self):
-        if self.request.user.user_type == "driver":
-            return Driver.objects.filter(user=self.request.user)
-        elif self.request.user.user_type == "rider":
-            return Rider.objects.filter(user=self.request.user)
-
-    def get_object(self):
-        if self.request.user.user_type == "driver":
-            return self.request.user.driver
-        elif self.request.user.user_type == "rider":
-            return self.request.user.rider
-
-
-class DriverDetailView(generics.RetrieveAPIView):
-    queryset = Driver.objects.all()
-    serializer_class = DriverSerializer
-    permission_classes = [IsAuthenticated]
-
-
-class RiderDetailView(generics.RetrieveAPIView):
-    queryset = Rider.objects.all()
-    serializer_class = RiderSerializer
-    permission_classes = [IsAuthenticated]
-
-
-class DriverProfileUpdateView(generics.UpdateAPIView):
-    queryset = Driver.objects.all()
-    serializer_class = DriverSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        return self.request.user.driver
-
-
-class RiderProfileUpdateView(generics.UpdateAPIView):
-    queryset = Rider.objects.all()
-    serializer_class = RiderSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        return self.request.user.rider
-
-
 class GenerateOTPView(APIView):
     permission_classes = []
 
@@ -194,6 +142,40 @@ class RiderSignupView(generics.CreateAPIView):
             {"tokens": get_tokens_for_user(user), "user": response_serializer.data},
             status=status.HTTP_201_CREATED,
         )
+
+
+class ProfileUpdateView(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.user.user_type == "driver":
+            return DriverUpdateProfileSerializer
+        elif self.request.user.user_type == "rider":
+            return RiderUpdateProfileSerializer
+
+    def get_queryset(self):
+        if self.request.user.user_type == "driver":
+            return Driver.objects.filter(user=self.request.user)
+        elif self.request.user.user_type == "rider":
+            return Rider.objects.filter(user=self.request.user)
+
+    def get_object(self):
+        if self.request.user.user_type == "driver":
+            return self.request.user.driver
+        elif self.request.user.user_type == "rider":
+            return self.request.user.rider
+
+
+class DriverDetailView(generics.RetrieveAPIView):
+    queryset = Driver.objects.all()
+    serializer_class = DriverSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class RiderDetailView(generics.RetrieveAPIView):
+    queryset = Rider.objects.all()
+    serializer_class = RiderSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class PasswordUpdateView(APIView):
