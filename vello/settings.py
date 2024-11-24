@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from datetime import timedelta
+import os
 from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
@@ -34,6 +35,11 @@ DEBUG = True
 
 
 ALLOWED_HOSTS = []
+
+
+EXTERNAL_HOSTNAME = os.environ.get("EXTERNAL_HOSTNAME")
+if EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(EXTERNAL_HOSTNAME)
 
 AUTH_USER_MODEL = "app.User"
 
