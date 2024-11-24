@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
+
+from app.utils import send_otp_email
 from .models import Driver, Rider, User
 from .serializers import (
     DriverProfileSerializer,
@@ -83,6 +85,7 @@ class GenerateOTPView(APIView):
             next_request_time = now + cooldown_period
             print(f"Your OTP code is {otp_record.otp} for email {email}")
             # Send OTP to user's email or phone number here
+            send_otp_email(email, otp_record.otp)
             return Response(
                 {
                     "message": "OTP sent successfully",

@@ -22,6 +22,9 @@ class OTP(models.Model):
     def generate_otp():
         return "".join(random.choices(string.digits, k=6))
 
+    def __str__(self):
+        return f"({self.otp}) {self.email} "
+
 
 class UserType(Enum):
     DRIVER = "driver"
